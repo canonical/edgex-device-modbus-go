@@ -98,3 +98,22 @@ And restart the service:
 **Note** - at this time changes to configuration values in the [Writable] section are not supported.
 
 For details on the mapping of configuration options to Config options, please refer to "Service Environment Configuration Overrides".
+
+## Service Environment Configuration Overrides
+
+**Note** - all of the configuration options below must be specified with the prefix: 'env.'
+
+```
+[Service]
+service.boot-timeout            // Service.BootTimeout
+service.check-interval          // Service.CheckInterval
+service.server-bind-addr        // Service.ServerBindAddr
+service.port                    // Service.Port
+service.startup-msg             // Service.StartupMsg
+service.timeout                 // Service.Timeout
+
+[Clients.CoreData]
+clients.data.port               // Clients.Data.Port
+
+[Clients.Metadata]
+clients.metadata.port           // Clients.Metadata.Port
