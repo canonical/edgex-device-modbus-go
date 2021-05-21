@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	hooks "github.com/canonical/edgex-snap-hooks"
 )
@@ -49,19 +48,9 @@ func installConfig() error {
 }
 
 func main() {
-	var debug = false
 	var err error
 
-	status, err := cli.Config("debug")
-	if err != nil {
-		fmt.Println(fmt.Sprintf("edgex-device-modbus:install: can't read value of 'debug': %v", err))
-		os.Exit(1)
-	}
-	if status == "true" {
-		debug = true
-	}
-
-	if err = hooks.Init(debug, "edgex-device-modbus"); err != nil {
+	if err = hooks.Init(false, "edgex-device-modbus"); err != nil {
 		fmt.Println(fmt.Sprintf("edgex-device-mqtt::install: initialization failure: %v", err))
 		os.Exit(1)
 
@@ -73,48 +62,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	cli := hooks.NewSnapCtl()
-	svc := fmt.Sprintf("%s.device-mqtt", hooks.SnapInst)
-
-	autostart, err := cli.Config(hooks.AutostartConfig)
+	// disable the service and handle the autostart logic in the configure hook
+	// as default snap configuration is not available when the install hook runs
+	err = cli.Stop("device-modbus", true)
 	if err != nil {
-		hooks.Error(fmt.Sprintf("Reading config 'autostart' failed: %v", err))
+		hooks.Error(fmt.Sprintf("Can't stop service - %v", err))
 		os.Exit(1)
-	}
-
-	// TODO: move profile config before autostart, if profile=default, or
-	// no configuration file exists for the profile, then ignore autostart
-
-	switch strings.ToLower(autostart) {
-	case "true":
-	case "yes":
-		break
-	case "":
-	case "no":
-		// disable app-service-configurable initially because it specific requires configuration
-		// with a device profile that will be specific to each installation
-		err = cli.Stop(svc, true)
-		if err != nil {
-			hooks.Error(fmt.Sprintf("Can't stop service - %v", err))
-			os.Exit(1)
-		}
-	default:
-		hooks.Error(fmt.Sprintf("Invalid value for 'autostart' : %s", autostart))
-		os.Exit(1)
-	}
-
-	envJSON, err := cli.Config(hooks.EnvConfig)
-	if err != nil {
-		hooks.Error(fmt.Sprintf("Reading config 'env' failed: %v", err))
-		os.Exit(1)
-	}
-
-	if envJSON != "" {
-		hooks.Debug(fmt.Sprintf("edgex-device-modbus:install: envJSON: %s", envJSON))
-		err = hooks.HandleEdgeXConfig("device-modbus", envJSON, nil)
-		if err != nil {
-			hooks.Error(fmt.Sprintf("HandleEdgeXConfig failed: %v", err))
-			os.Exit(1)
-		}
 	}
 }
