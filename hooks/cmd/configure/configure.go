@@ -21,6 +21,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	hooks "github.com/canonical/edgex-snap-hooks"
 )
@@ -41,7 +42,7 @@ func main() {
 		debug = true
 	}
 
-	if err = hooks.Init(debug, "device-nmodbus"); err != nil {
+	if err = hooks.Init(debug, "edgex-device-modbus"); err != nil {
 		fmt.Println(fmt.Sprintf("edgex-device-modbus:configure: initialization failure: %v", err))
 		os.Exit(1)
 
@@ -61,5 +62,40 @@ func main() {
 			hooks.Error(fmt.Sprintf("HandleEdgeXConfig failed: %v", err))
 			os.Exit(1)
 		}
+	}
+
+	// If autostart is not explicitly set, default to "no"
+	// as only example service configuration and profiles
+	// are provided by default.
+	autostart, err := cli.Config(hooks.AutostartConfig)
+	if err != nil {
+		hooks.Error(fmt.Sprintf("Reading config 'autostart' failed: %v", err))
+		os.Exit(1)
+	}
+	if autostart == "" {
+		hooks.Debug("edgex-device-modbus autostart is NOT set, initializing to 'no'")
+		autostart = "no"
+	}
+	autostart = strings.ToLower(autostart)
+
+	hooks.Debug(fmt.Sprintf("edgex-device-modbus autostart is %s", autostart))
+
+	// service is stopped/disabled by default in the install hook
+	switch autostart {
+	case "true":
+		fallthrough
+	case "yes":
+		err = cli.Start("device-modbus", true)
+		if err != nil {
+			hooks.Error(fmt.Sprintf("Can't start service - %v", err))
+			os.Exit(1)
+		}
+	case "false":
+	     // no action necessary
+	case "no":
+	     // no action necessary
+	default:
+		hooks.Error(fmt.Sprintf("Invalid value for 'autostart' : %s", autostart))
+		os.Exit(1)
 	}
 }
